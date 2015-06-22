@@ -22,14 +22,42 @@ struct button {
 	int debounce; /* debounce "timer" */
 };
 
-int main(void) {
-	int state = 0;
-	int raw1 = 0;
-	int raw2 = 0;
-	int debounce = 0;
-	int val1 = 1; 
-	int val2 = 1;
+static int state = 0;
 
+void button_init(struct button *b) {
+	b->raw1 = 1;
+	b->raw2 = 1;
+	b->val1 = 1;
+	b->val2 = 1;
+	b->debounce = 0;
+}
+
+void check_button(struct button *b) {
+	b->raw1 = PINB & (1 << BUTTON);
+
+	if ( b->raw1 != b->raw2 )
+		b->debounce = 0;
+		
+	if ( b->debounce++ > DEBOUNCE ) {
+		b->val2 = b->val1;
+		b->val1 = b->raw1;
+
+		/* the leading edge toggles state */
+		if ( !b->val1 && b->val2 ) {
+			state = state ? 0 : 1;
+			if ( state ) 
+				led_on();
+			else 
+				led_off();
+		} 
+
+		b->debounce = 0;
+	}
+	b->raw2 = b->raw1;
+}
+
+int main(void) {
+	struct button b;
 
 	/* make LED an output */
 	DDRB |= 1 << LED;
@@ -37,29 +65,10 @@ int main(void) {
 	PORTB |= 1 << BUTTON;
 	
 	led_off();
+	button_init(&b);
 
 	while(1) {
-		raw1 = PINB & (1 << BUTTON);
-
-		if ( raw1 != raw2 )
-			debounce = 0;
-		
-		if ( debounce++ > DEBOUNCE ) {
-			val2 = val1;
-			val1 = raw1;
-
-			/* the leading edge toggles state */
-			if ( !val1 && val2 ) {
-				state = state ? 0 : 1;
-				if ( state ) 
-					led_on();
-				else 
-					led_off();
-			} 
-
-			debounce = 0;
-		}
-		raw2 = raw1;
+		check_button(&b);
 	}
 
 
