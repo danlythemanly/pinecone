@@ -1,8 +1,12 @@
 #include <avr/io.h>
+#include <avr/sleep.h>
+#include <avr/interrupt.h>
+
 #include <util/delay.h>
 
 
 #define LED PB4
+#define LED2 PB2
 #define BUTTON PB3
 #define SPEAKER PB1
 #define DEBOUNCE 100
@@ -24,6 +28,8 @@ struct button {
 };
 
 static int state = 0;
+static struct button b;
+
 
 void button_init(struct button *b) {
 	b->raw1 = 1;
@@ -33,7 +39,9 @@ void button_init(struct button *b) {
 	b->debounce = 0;
 }
 
-void check_button(struct button *b) {
+int check_button(struct button *b) {
+	int ret = 0;
+
 	b->raw1 = PINB & (1 << BUTTON);
 
 	if ( b->raw1 != b->raw2 )
@@ -44,138 +52,206 @@ void check_button(struct button *b) {
 		b->val1 = b->raw1;
 
 		/* the leading edge toggles state */
-		if ( !b->val1 && b->val2 ) {
-			state = state ? 0 : 1;
-			if ( state ) 
-				led_on();
-			else 
-				led_off();
-		} 
+		if ( !b->val1 && b->val2 )
+			ret = 1;
 
 		b->debounce = 0;
 	}
 	b->raw2 = b->raw1;
+	
+	return ret;
 }
 
+int read_button(struct button *b) {
+	b->raw1 = PINB & (1 << BUTTON);
+
+	if ( b->raw1 != b->raw2 )
+		b->debounce = 0;
+		
+	if ( b->debounce++ > DEBOUNCE ) {
+		b->val2 = b->val1;
+		b->val1 = b->raw1;
+
+		/* the leading edge toggles state */
+		//if ( !b->val1 && b->val2 )
+		//	ret = 1;
+
+		b->debounce = 0;
+	}
+	b->raw2 = b->raw1;
+	
+	return b->val1;
+}
+
+
+static int try_sleep(void) {
+	int ret = 0;
+
+    ADCSRA &= ~_BV(ADEN);       // ADC off
+    set_sleep_mode(SLEEP_MODE_PWR_DOWN);   
+
+	cli();
+	if ( !state ) {
+		ret = 1;
+		sleep_enable();
+		sleep_bod_disable();
+		sei();  
+		sleep_cpu();    
+
+		cli();                     // Disable interrupts
+		PCMSK &= ~_BV(PCINT3);     // Turn off PB3 as interrupt pin
+		sleep_disable();                        // Clear SE bit
+		ADCSRA |= _BV(ADEN);                    // ADC on
+		sei();                                  // Enable interrupts
+    } else
+		sei();
+	return ret;
+}
+
+/* int try_sleep(void) { */
+/* 	int ret = 0; */
+
+/* 	set_sleep_mode(SLEEP_MODE_PWR_DOWN); */
+/* 	cli(); */
+/* 	if ( !state ) { */
+/* 		ret = 1; */
+/* 		sleep_enable(); */
+/* 		sleep_bod_disable(); */
+/* 		sei(); */
+/* 		sleep_cpu(); */
+/* 		sleep_disable(); */
+/* 	} */
+/* 	sei(); */
+	
+/* 	return ret; */
+/* } */
+
+int num_interrupts = 0;
+
+void sleep() {
+
+    GIMSK |= _BV(PCIE);                     // Enable Pin Change Interrupts
+    PCMSK |= _BV(PCINT3);                   // Use PB3 as interrupt pin
+    ADCSRA &= ~_BV(ADEN);                   // ADC off
+    set_sleep_mode(SLEEP_MODE_PWR_DOWN);    // replaces above statement
+
+    sleep_enable();                         // Sets the Sleep Enable bit in the MCUCR Register (SE BIT)
+    sei();                                  // Enable interrupts
+    sleep_cpu();                            // sleep
+
+    cli();                                  // Disable interrupts
+    //PCMSK &= ~_BV(PCINT3);                  // Turn off PB3 as interrupt pin
+    sleep_disable();                        // Clear SE bit
+    ADCSRA |= _BV(ADEN);                    // ADC on
+
+    sei();                                  // Enable interrupts
+} 
+
 int main(void) {
-	struct button b;
+
+    //GIMSK |= _BV(PCIE);         // Enable Pin Change Interrupts
+    //PCMSK |= _BV(PCINT3);       // Use PB3 as interrupt pin
+
 
 	/* make LED an output */
-	DDRB |= (1 << LED) | (1 << SPEAKER);
+	//DDRB |= (1 << LED) | (1 << SPEAKER) | (1 << PB0) | (1 << LED2);
 	/* enable pull-up resistor for BUTTON */
+	//PORTB |= 1 << BUTTON;
+	DDRB &= ~(1 << BUTTON);
+	DDRB |= (1 << LED2) | (1 << LED);
 	PORTB |= 1 << BUTTON;
 
-#if 0
-	/* Fast PWM, top is 0xFF, non-inverting */
-	TCCR0A |= (1 << WGM01) | (1 << WGM00) | (1 << COM0A1);// | (1 << COM0A0);
-	/* 64 pre-scale ~= 488 Hz*/
-	TCCR0B |= (1 << CS00) | (1 << CS02);// | (1 << CS00);
-
-	OCR0A = 128;
-#endif	
-
-#define OCR0A_VAL 0x81
-
-#if 1
-	/* fast PWM non-inverting, prescaler /256 */
-	TCCR0A = (1 << COM0B1) | (1 << WGM01) | (1 << WGM00);
-	TCCR0B = (1 << WGM02) | (1<<CS02) | (0<<CS01) | (0<<CS00);
-	TCNT0=0x00;
-	OCR0A=0x81;
-	//OCR0B=0x41;
-	OCR0B=0x00;
-#endif
-
-	led_off();
+	/* initialize led and button */
+	//led_off();
 	button_init(&b);
 
-	int count = 0;
-	//int count2 = 1000;
-#if 1
-#define NUM_NOTES 16
-	int note[NUM_NOTES];
-	int n = 0;
-#endif
-	//	note[0] = 0xff;
-	//	note[1] = 0xb0;
-	//note[0] = 0x80;
-	//note[1] = 0x70;
 
-#if 0
-	note[0] = 239;
-	note[1] = 225;  
-	note[2] = 213; 
-	note[3] = 201;
-	note[4] = 190;
-	note[5] = 179;
-	note[6] = 169;
-	note[7] = 159;  
-	note[8] = 150; 
-	note[9] = 142;
-	note[10] = 134;
-	note[11] = 127;
-#endif
-
-#if 0
-	note[0] = 0x60;
-	note[1] = 0x55;  
-	note[2] = 0x4c; 
-	note[3] = 0x48; /* 4th */
-	note[4] = 0x40; /* 5th */
-	note[5] = 0x00;
-#endif
-
-#if 1
-	note[0] = 0x60;
-	note[1] = 0xc0;
-	note[2] = 0x60;
-	note[3] = 0xc0;
-	note[4] = 0x40;
-	note[5] = 0x0;
-	note[6] = 0x40;
-	note[7] = 0x0;
-	note[8] = 0x39;
-	note[9] = 0x0;
-	note[10] = 0x39;
-	note[11] = 0x0;
-	note[12] = 0x40;
-	note[13] = 0x40;
-	note[14] = 0x40;
-	note[15] = 0x0;
-#endif
-	while(1) {
-		check_button(&b);
-#if 0
-		if (count++ % 1000 == 0){
-		    OCR0B = (OCR0B + 1) % (OCR0A_VAL - 1) + 1;
+	while (1) {
+#if 0	
+		if ( check_button(&b) ) {
+			state = state ? 0 : 1;
+			if ( state ) {
+				led_on();
+			} else {
+				led_off();
+				try_sleep();
+			}
 		}
-#endif
-
-#if 1
-		//if ((count++ == 0) && (count2++ % 2 == 0)){
-		if ((count++ == 0)){
-			OCR0A = note[n];
-			n = (n + 1) % NUM_NOTES;
+#endif	
+		if ( !state ) {
+			sleep();
+			
+			//while( read_button(&b) );
+			PCMSK |= _BV(PCINT3); // ready for next interrupt now
+			
 		}
-#endif
-
-#if 0
-		if (count++ > 30000){
-			TCCR0B ^= (1 << CS02);
- 			TCNT0 =0;
-			count = 0;
-		}
-#endif
-
-		/* I don't think we need to use a second timer to advance
-		   through the waveform with the appropriate divider for a
-		   particular note... */
+		
+		PORTB |= (1 << LED2);
+		_delay_ms(100);		
+		PORTB &= ~(1 << LED2);
+		_delay_ms(100);
 	}
 
-
 #if 0
-		_delay_ms(1000);
+		while ( !check_button(&b) );
+		state = state ? 0 : 1;
+		if ( state ) {
+			led_on();
+		} else {
+			led_off();
+			_delay_ms(1000);
+			try_sleep();
+		}
 #endif
+
+
+
+	_delay_ms(1000);
 
 	return 0;
 }
+
+// Called on pin interrupt
+ISR(PCINT0_vect) {
+	int i;
+
+	// We don't want other interrupts from this pin yet
+    PCMSK &= ~_BV(PCINT3);  
+
+	//while ( !check_button(&b) );
+	state = state ? 0 : 1;
+	if ( state ) {
+		led_on();
+	} else {
+		led_off();
+	}
+
+#if 0
+	num_interrupts++;
+
+	for ( i = 0; i < 3; i++ ){
+		PORTB |= (1 << LED2);
+		_delay_ms(100);		
+		PORTB &= ~(1 << LED2);
+		_delay_ms(100);		
+	}
+	_delay_ms(1000);		
+	for ( i = 0; i < num_interrupts; i++ ){
+		PORTB |= (1 << LED2);
+		_delay_ms(1000);		
+		PORTB &= ~(1 << LED2);
+		_delay_ms(1000);		
+	}
+	_delay_ms(1000);		
+	for ( i = 0; i < 3; i++ ){
+		PORTB |= (1 << LED2);
+		_delay_ms(100);		
+		PORTB &= ~(1 << LED2);
+		_delay_ms(100);		
+	}
+#endif
+
+
+
+}
+
