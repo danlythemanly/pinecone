@@ -28,11 +28,18 @@
 
 uint8_t wav_len = 128;
 
-#define SIN_LEN 128 /* A4 */
-//#define SIN_LEN 256 /* A4 */
+#ifdef TWO_SPEAKERS
+uint8_t p2, last_p2;
+uint8_t wav_len2 = 100;
+static uint8_t wav2[SIN_LEN];
+#endif
+
+//#define SIN_LEN 128 /* A4 */
+#define SIN_LEN 256 /* A4 */
 static uint8_t wav[SIN_LEN];
 //static uint8_t sin_wav[SIN_LEN * 2];
 
+#if 0
 #if 1
 static int8_t sin_wav[SIN_LEN] = { /* sin */
 0x80, 0x86, 0x8c, 0x92, 0x98, 0x9e, 0xa4, 0xaa, 
@@ -91,7 +98,7 @@ static uint8_t sin_wav[SIN_LEN] = { /* noise */
 0xea, 0xbb, 0xfa, 0x23, 0x6c, 0x7a, 0xc0, 0x28,
 };
 #endif
-
+#endif
 
 uint8_t p, last_p;
 
@@ -115,6 +122,7 @@ uint8_t p, last_p;
 #define D4 213
 #define C4 239
 
+uint8_t m = 0;
 uint8_t melody[48] = { C4,C4,G4,G4,A4,A4,G4,G4, 
 					   F4,F4,E4,E4,D4,D4,C4,C4,
 					   G4,G4,F4,F4,E4,E4,D4,D4,
@@ -126,59 +134,86 @@ int	melody_len = 48;
 
 static void refresh(void) {
 	int i;
-	for (i=0; i< wav_len; i++) {
-		//wav[i] = noise[i];
-		wav[i] = sin_wav[i];
-		wav[i] = i * 2;
-	}
+	uint8_t mid = wav_len >> 1;
+	for (i=0; i < mid; i++)
+		wav[i] = i >> 1;
+	for (i = mid; i < wav_len; i++)
+		wav[i] = (i + 256 - wav_len) >> 1;
+
 }
 
-
-#if 0
-#define VIBRATO_SPEED 1000 /* "vibrato" speed (lower is faster) */
-#define NOTE_DURATION 10000
-#define DECAY_FACTOR 4  /* between 1 and 8, lower decays faster */
-
-static void karplus_strong(void) {
-	uint8_t i = 0;
-	uint8_t j = wav_len - 1;
-	uint16_t times;
-
-	for(times = 0; times < NOTE_DURATION; times++) {
-		//uint16_t val;
-		//val = (wav[i] >> 1) + (wav[j] >> 1);
-		wav[i] = (wav[i] >> 1) + (wav[j] >> 1) - 10;
-		//val = val * DECAY_FACTOR;
-		//val >>= 3;
-		//wav[i] = val;
-
-		j = i++;
-		if (i == wav_len) i = 0;
-		//_delay_us(VIBRATO_SPEED); 
+#ifdef TWO_SPEAKERS
+static void refresh2(void) {
+	int i;
+	for (i=0; i< wav_len; i++) {
+		//wav[i] = noise[i];
+		//wav[i] = sin_wav[i];
+		wav2[i] = i * 2;
 	}
 }
 #endif
 
+#define MELODY_FRAG_LEN 7
+uint8_t melody_a1[MELODY_FRAG_LEN] = { C4,C4,G4,G4,A4,A4,G4 };
+uint8_t melody_a2[MELODY_FRAG_LEN] = { F4,F4,E4,E4,D4,D4,C4 };
+uint8_t melody_b[MELODY_FRAG_LEN] = { G4,G4,F4,F4,E4,E4,D4 };
+					   
+#define DELAY 200
+void twinkle_a(void) {
+	uint8_t i;
+	for ( i = 0; i < MELODY_FRAG_LEN; i++ ) {
+		wav_len = melody_a1[i];
+		refresh();
+		_delay_ms(DELAY);
+	}
+	_delay_ms(DELAY);
+	for ( i = 0; i < MELODY_FRAG_LEN; i++ ) {
+		wav_len = melody_a2[i];
+		refresh();
+		_delay_ms(DELAY);
+	}
+	_delay_ms(DELAY);
+}
+
+void twinkle_b(void) {
+	uint8_t i, j;
+	for ( j = 0; j < 2; j++ ) {
+		for ( i = 0; i < MELODY_FRAG_LEN; i++ ) {
+			wav_len = melody_b[i];
+			refresh();
+			_delay_ms(DELAY);
+		}
+		_delay_ms(DELAY);
+	}
+}
+void twinkle(void) {
+	twinkle_a();
+	twinkle_b();
+	twinkle_a();
+	_delay_ms(DELAY);
+	_delay_ms(DELAY);	
+}
+
 int main() {
 	
-	DDRB |= (1 << PB1) | (1 << PB0);
-
+	DDRB |= (1 << PB1) | (1 << PB0) | (1 << PB4) | (1 << PB3);
 
 	// Enable 64 MHz PLL and use as source for Timer1
 	PLLCSR |= 1 << PLLE;            /* Enable PLL */
 	_delay_ms(100);                 /* Wait for PLL steady state */
 	while ((PLLCSR | PLOCK) == 0);  /* Poll PLOCK bit */
 	PLLCSR |= PCKE;                 /* Enable 64 MHz PLL for Timer 1 */
-	
-	
-	
  
   // Set up Timer/Counter1 for PWM output
 	//TCCR1 = 1<<PWM1A | 2<<COM1A0 | 1<<CS10; // PWM A, clear on match, 1:1 prescale
 	TCCR1 = 1<<PWM1A | 2<<COM1A0 | 1<<CS10; // PWM A, clear on match, 1:1 prescale
 
-  //GTCCR = 1<<PWM1B | 2<<COM1B0;           // PWM B, clear on match
   OCR1A = 128;                    // 50% duty at start
+
+#ifdef TWO_SPEAKERS
+  GTCCR = 1<<PWM1B | 1<<COM1B0;           // PWM B, clear on match
+  OCR1B = 128;
+#endif
 
   // Set up Timer/Counter0 for 8kHz interrupt to output samples.
   //TCCR0A = 3<<WGM00;                      // Fast PWM
@@ -197,41 +232,32 @@ int main() {
   /* pinMode(1, OUTPUT); */
   refresh();
   p = 0;
-  last_p = wav_len;
+  last_p = wav_len = melody[0];
 
+#ifdef TWO_SPEAKERS
+  wav_len2 = 100;
+  p2 = 0;
+  last_p2 = wav_len2;
+#endif
   sei();
-  for(;;) {
-#define DELAY 100
-	  //karplus_strong();
-	  _delay_ms(DELAY);
-	  wav_len = 100;
-	  refresh();
-
-	  _delay_ms(DELAY);
-	  wav_len = 114;
-	  refresh();
-
-	  _delay_ms(DELAY);
-	  wav_len = 128;
-	  refresh();
-
-	  _delay_ms(DELAY);
-	  wav_len = 114;
-	  refresh();
-
-
-
-  };
+  for(;;)
+	  twinkle();
   
   return 0;
 }
 
 
-#define DECAY 4
+#define DECAY 3
 int decay = 0;
+
+#ifdef TWO_SPEAKERS
+#define DECAY2 2
+int decay2 = 0;
+#endif
+
 // Sample interrupt
 ISR(TIMER0_COMPA_vect) {
-	OCR1A = wav[p]; 
+	OCR1A = wav[p];
 	if ( decay == 0 )
 		wav[p] = (wav[p] >> 1) + (wav[last_p] >> 1);
 	last_p = p++;
@@ -239,4 +265,15 @@ ISR(TIMER0_COMPA_vect) {
 		p = 0;
 		if (decay++ == DECAY) decay = 0;
 	}
+#ifdef TWO_SPEAKERS
+	OCR1B = wav2[p2];
+	if ( decay2 == 0 )
+		wav2[p2] = (wav2[p2] >> 1) + (wav2[last_p2] >> 1);
+	last_p2 = p2++;
+	if (p2 == wav_len2) {
+		p2 = 0;
+		if (decay2++ == DECAY2) decay2 = 0;
+	}
+#endif
+
 }
