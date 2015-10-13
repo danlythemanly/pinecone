@@ -28,16 +28,15 @@
 
 uint8_t wav_len = 128;
 
-#ifdef TWO_SPEAKERS
-uint8_t p2, last_p2;
-uint8_t wav_len2 = 100;
-static uint8_t wav2[SIN_LEN];
-#endif
 
-//#define SIN_LEN 128 /* A4 */
 #define SIN_LEN 256 /* A4 */
 static uint8_t wav[SIN_LEN];
-//static uint8_t sin_wav[SIN_LEN * 2];
+
+#ifdef TWO_NOTES
+uint8_t p2, last_p2;
+uint8_t wav_len2 = 100;
+//static uint8_t wav2[SIN_LEN];
+#endif
 
 #if 0
 #if 1
@@ -115,12 +114,26 @@ uint8_t p, last_p;
   F3 = 174.614 --> 44
 
  */
+#define F5 89
+#define E5 95
+#define Eb5 100
+#define D5 106
+#define Db5 113
+#define C5 119
+#define B4 127
+#define Bb4 134
 #define A4 142
+#define Ab4 150
 #define G4 159
+#define Gb4 169
 #define F4 179
 #define E4 190
+#define Eb4 201
 #define D4 213
+#define Db4 225
 #define C4 239
+#define B3 253
+
 
 uint8_t m = 0;
 uint8_t melody[48] = { C4,C4,G4,G4,A4,A4,G4,G4, 
@@ -136,33 +149,96 @@ static void refresh(void) {
 	int i;
 	uint8_t mid = wav_len >> 1;
 	for (i=0; i < mid; i++)
-		wav[i] = i >> 1;
+		wav[i] = i;// >> 1;
 	for (i = mid; i < wav_len; i++)
-		wav[i] = (i + 256 - wav_len) >> 1;
-
+		wav[i] = (i + 256 - wav_len);// >> 1;
 }
 
-#ifdef TWO_SPEAKERS
+#if 0
 static void refresh2(void) {
 	int i;
-	for (i=0; i< wav_len; i++) {
-		//wav[i] = noise[i];
-		//wav[i] = sin_wav[i];
-		wav2[i] = i * 2;
-	}
+	uint8_t mid = wav_len2 >> 1;
+	for (i=0; i < mid; i++)
+		wav2[i] = i >> 1;
+	for (i = mid; i < wav_len2; i++)
+		wav2[i] = (i + 256 - wav_len2) >> 1;
 }
 #endif
 
 #define MELODY_FRAG_LEN 7
+#ifdef TWO_NOTES
+uint8_t counter_a1[MELODY_FRAG_LEN] = { Ab4,Ab4,C4,C4,Db4,Db4,C4 };
+#endif
+//uint8_t melody_a1[MELODY_FRAG_LEN] = { Ab4,Ab4,Eb5,Eb5,F5,F5,Eb5 };
+//uint8_t melody_a2[MELODY_FRAG_LEN] = { Db5,Db5,C5,C5,Bb4,Bb4,Ab4 };
+//uint8_t melody_b[MELODY_FRAG_LEN] = { Eb5,Eb5,Db5,Db5,C5,C5,Bb4 };
 uint8_t melody_a1[MELODY_FRAG_LEN] = { C4,C4,G4,G4,A4,A4,G4 };
 uint8_t melody_a2[MELODY_FRAG_LEN] = { F4,F4,E4,E4,D4,D4,C4 };
 uint8_t melody_b[MELODY_FRAG_LEN] = { G4,G4,F4,F4,E4,E4,D4 };
+
+#define EIGHTH_NOTE 110
+
+#define MOON_LEN 27
+uint8_t moon[MOON_LEN] = { A4, F4, C4,
+						   A4, F4, C4,
+						   Bb4, G4, C4,
+						   Bb4, G4, C4,
+						   C5, A4, D5,
+						   C5, A4, D5,
+						   C5, A4, G4,
+						   F4, F4, E4, D4, E4, F4 };
+uint8_t moon_lens[MOON_LEN] = { 2, 2, 4,
+								2, 2, 4,
+								2, 2, 4,
+								2, 2, 4,
+								2, 2, 4,
+								2, 2, 4,
+								2, 2, 3,
+								1, 1, 1, 1, 1, 8 };
+
+#define TWINKLE_LEN 42
+uint8_t twinkle[TWINKLE_LEN] = { C4,C4,G4,G4,A4,A4,G4,
+								 F4,F4,E4,E4,D4,D4,C4,
+								 G4,G4,F4,F4,E4,E4,D4,
+								 G4,G4,F4,F4,E4,E4,D4,
+								 C4,C4,G4,G4,A4,A4,G4,
+								 F4,F4,E4,E4,D4,D4,C4 };
+uint8_t twinkle_lens[TWINKLE_LEN] = { 2, 2, 2, 2, 2, 2, 4,
+									  2, 2, 2, 2, 2, 2, 4,
+									  2, 2, 2, 2, 2, 2, 4,
+									  2, 2, 2, 2, 2, 2, 4,
+									  2, 2, 2, 2, 2, 2, 4,
+									  2, 2, 2, 2, 2, 2, 8};
+
+void play_moon(void) {
+	uint8_t i, j;
+	for ( i = 0; i < MOON_LEN; i++ ) {
+		wav_len = moon[i];
+		refresh();
+		for ( j = 0; j < moon_lens[i]; j++)
+			_delay_ms(EIGHTH_NOTE);
+	}
+}	
+void play_twinkle(void) {
+	uint8_t i, j;
+	for ( i = 0; i < TWINKLE_LEN; i++ ) {
+		wav_len = twinkle[i];
+		refresh();
+		for ( j = 0; j < twinkle_lens[i]; j++)
+			_delay_ms(EIGHTH_NOTE);
+	}
+}	
+
+
 					   
 #define DELAY 200
 void twinkle_a(void) {
 	uint8_t i;
 	for ( i = 0; i < MELODY_FRAG_LEN; i++ ) {
 		wav_len = melody_a1[i];
+#ifdef TWO_NOTES
+		wav_len2 = counter_a1[i];
+#endif
 		refresh();
 		_delay_ms(DELAY);
 	}
@@ -186,6 +262,7 @@ void twinkle_b(void) {
 		_delay_ms(DELAY);
 	}
 }
+#if 0
 void twinkle(void) {
 	twinkle_a();
 	twinkle_b();
@@ -193,6 +270,7 @@ void twinkle(void) {
 	_delay_ms(DELAY);
 	_delay_ms(DELAY);	
 }
+#endif
 
 int main() {
 	
@@ -233,25 +311,29 @@ int main() {
   refresh();
   p = 0;
   last_p = wav_len = melody[0];
-
 #ifdef TWO_SPEAKERS
+  p2 = 0;
+  last_p2 = wav_len2 = melody[0];
+
   wav_len2 = 100;
   p2 = 0;
   last_p2 = wav_len2;
 #endif
   sei();
-  for(;;)
-	  twinkle();
+  for(;;){
+	  play_twinkle();
+	  play_moon();
+  }
   
   return 0;
 }
 
 
-#define DECAY 3
+#define DECAY 4
 int decay = 0;
 
-#ifdef TWO_SPEAKERS
-#define DECAY2 2
+#ifdef TWO__NOTES
+#define DECAY2 3
 int decay2 = 0;
 #endif
 
@@ -265,15 +347,20 @@ ISR(TIMER0_COMPA_vect) {
 		p = 0;
 		if (decay++ == DECAY) decay = 0;
 	}
-#ifdef TWO_SPEAKERS
-	OCR1B = wav2[p2];
-	if ( decay2 == 0 )
-		wav2[p2] = (wav2[p2] >> 1) + (wav2[last_p2] >> 1);
-	last_p2 = p2++;
-	if (p2 == wav_len2) {
-		p2 = 0;
-		if (decay2++ == DECAY2) decay2 = 0;
-	}
-#endif
 
+#ifdef TWO_NOTES
+	OCR1A = wav[p] + wav[p2];
+	if ( decay == 0 ) {
+		wav[p] = (wav[p] >> 1) + (wav[last_p] >> 1);
+		wav[p2] = (wav[p2] >> 1) + (wav[last_p2] >> 1);
+	}
+		
+	last_p = p++;
+	last_p2 = p2++;
+	if (p == wav_len) {
+		p = 0;
+		if (decay++ == DECAY) decay = 0;
+	}
+	if (p2 == wav_len2) p2 = 0;
+#endif
 }
