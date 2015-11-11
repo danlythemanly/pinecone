@@ -73,7 +73,20 @@ uint8_t p, last_p;
 #define C4 239
 #define B3 253
 
+#define Eb5 0 /* top TWINKLE, MOON */
+#define Db5 1
+#define B4  2
+#define Bb4 3
+#define Ab4 4 /* top GOODNIGHT */
+#define Gb4 5 /* bottom TWINKLE */
+#define F4  6
+#define Eb4 7
+#define Db4 8 /* bottom MOON */
+#define B3  9 /* bottom GOODNIGHT */
 
+/* only diatonic notes are needed */
+uint8_t notes[10] = {100, 113, 127, 134, 150, 
+					 169, 179, 201, 225, 253 };
 
 /* sawtooth with full amplitude */
 static void refresh(void) {
@@ -167,6 +180,23 @@ uint8_t twinkle_lens[TWINKLE_LEN] = { 2, 2, 2, 2, 2, 2, 4,
 									  2, 2, 2, 2, 2, 2, 4,
 									  2, 2, 2, 2, 2, 2, 8};
 
+#define SET_NOTE(a,i,o,l) \
+	a[i>>1] = ((o << 3) | (l - 1)) << ((i & 1) << 2)
+#define GET_NOTE(a,i) \
+	(a[i>>1] >> ((i & 1) << 2))
+#define GET_NOTE_LEN(a,i) \
+	(GET_NOTE(a,i) & 7)
+#define GET_NOTE_OCTAVE(a,i) \
+	((GET_NOTE(a,i) & 8) >> 3)
+
+/* XXX Lengths need to be encoded the same way as note (there are only
+       8 combos used */
+
+/* XXX change to this:
+
+ 7 6 5 4 3 2 1 0
+|-note--|o|-len-|
+*/
 
 #define GOODNIGHT_LEN 11
 uint8_t goodnight[GOODNIGHT_LEN] = { Gb4,Db4,Ab4,F4,Gb4,B3,Eb4,
