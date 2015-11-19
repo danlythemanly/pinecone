@@ -53,6 +53,7 @@ uint8_t p, last_p;
   F3 = 174.614 --> 44
 
  */
+#if 0
 #define F5 89
 #define E5 95
 #define Eb5 100
@@ -83,12 +84,25 @@ uint8_t p, last_p;
 #define Eb4 7
 #define Db4 8 /* bottom MOON */
 #define B3  9 /* bottom GOODNIGHT */
+#endif
+
+#define A 0 /* top TWINKLE, MOON */
+#define G 1
+#define F 2
+#define E 3
+#define D 4 /* top GOODNIGHT */
+#define C 5 /* bottom TWINKLE */
+#define BL 6
+#define AL 7
+#define GL 8 /* bottom MOON */
+#define FL 9 /* bottom GOODNIGHT */
+
 
 /* only diatonic notes are needed */
 uint8_t notes[10] = {100, 113, 127, 134, 150, 
 					 169, 179, 201, 225, 253 };
 
-/* sawtooth with full amplitude */
+/* sawtooth-like with full amplitude */
 static void refresh(void) {
 	int i;
 	uint8_t mid = wav_len >> 1;
@@ -117,11 +131,14 @@ uint8_t counter_a1[MELODY_FRAG_LEN] = { Ab4,Ab4,C4,C4,Db4,Db4,C4 };
 //uint8_t melody_a1[MELODY_FRAG_LEN] = { Ab4,Ab4,Eb5,Eb5,F5,F5,Eb5 };
 //uint8_t melody_a2[MELODY_FRAG_LEN] = { Db5,Db5,C5,C5,Bb4,Bb4,Ab4 };
 //uint8_t melody_b[MELODY_FRAG_LEN] = { Eb5,Eb5,Db5,Db5,C5,C5,Bb4 };
+#if 0
 uint8_t melody_a1[MELODY_FRAG_LEN] = { C4,C4,G4,G4,A4,A4,G4 };
 uint8_t melody_a2[MELODY_FRAG_LEN] = { F4,F4,E4,E4,D4,D4,C4 };
 uint8_t melody_b[MELODY_FRAG_LEN] = { G4,G4,F4,F4,E4,E4,D4 };
+#endif
 
-#define EIGHTH_NOTE 110
+#define EIGHTH_NOTE 70
+#define SIXTEENTH_NOTE (EIGHTH_NOTE >> 1)
 #define RIT 20
 
 #define MOON_LEN 27
@@ -135,6 +152,7 @@ uint8_t moon[MOON_LEN] = { A4, F4, C4,
 						   C5, A4, G4,
 						   F4, F4, E4, D4, E4, F4 };
 #endif
+#if 0
 uint8_t moon[MOON_LEN] = { Bb4, Gb4, Db4,
 						   Bb4, Gb4, Db4,
 						   B4, Ab4, Db4,
@@ -151,8 +169,8 @@ uint8_t moon_lens[MOON_LEN] = { 2, 2, 4,
 								2, 2, 4,
 								2, 2, 3,
 								1, 1, 1, 1, 1, 8 };
-
-#define TWINKLE_LEN 42
+#endif
+//#define TWINKLE_LEN 42
 #if 0
 uint8_t twinkle[TWINKLE_LEN] = { C4,C4,G4,G4,A4,A4,G4,
 								 F4,F4,E4,E4,D4,D4,C4,
@@ -167,6 +185,7 @@ uint8_t twinkle[TWINKLE_LEN] = { F4,F4,C5,C5,D5,D5,C5,
 								 F4,F4,C5,C5,D5,D5,C5,
 								 Bb4,Bb4,A4,A4,G4,G4,F4 };
 #endif
+#if 0
 uint8_t twinkle[TWINKLE_LEN] = { Gb4,Gb4,Db5,Db5,Eb5,Eb5,Db5,
 								 B4,B4,Bb4,Bb4,Ab4,Ab4,Gb4,
 								 Db5,Db5,B4,B4,Bb4,Bb4,Ab4,
@@ -179,6 +198,69 @@ uint8_t twinkle_lens[TWINKLE_LEN] = { 2, 2, 2, 2, 2, 2, 4,
 									  2, 2, 2, 2, 2, 2, 4,
 									  2, 2, 2, 2, 2, 2, 4,
 									  2, 2, 2, 2, 2, 2, 8};
+#endif
+
+#define ENC(n,o,l) ((n) << 4 | (o) << 3 | (l))
+#define NOTE(x) ((x) >> 4)
+#define OCTAVE(x) (!!((x) & 8))
+#define LEN(x) ((x) & 7)
+
+#define TWINKLE_LEN 94
+uint8_t twinkle_enc[TWINKLE_LEN] = {ENC(C,0,2), ENC(C,1,2),
+									ENC(C,0,2), ENC(C,1,2),
+									ENC(G,0,2), ENC(E,1,2), 
+									ENC(G,0,2), ENC(E,1,2),
+									ENC(A,0,2), ENC(F,1,2),
+									ENC(A,0,2), ENC(F,1,2), 
+									ENC(G,0,2), ENC(E,1,2),
+									ENC(C,1,2), ENC(E,1,2),
+
+									ENC(F,0,2), ENC(D,1,2),
+									ENC(F,0,2), ENC(D,1,2),
+									ENC(E,0,2), ENC(C,1,2), 
+									ENC(E,0,2), ENC(C,1,2),
+									ENC(D,0,2), ENC(G,1,2),
+									ENC(D,0,2), ENC(F,1,2), 
+									ENC(C,0,2), ENC(E,1,2),
+									ENC(C,1,4),
+
+									ENC(G,0,2), ENC(E,1,2),
+									ENC(G,0,2), ENC(E,1,2),
+									ENC(F,0,2), ENC(D,1,2), 
+									ENC(F,0,2), ENC(D,1,2),
+									ENC(E,0,2), ENC(C,1,2),
+									ENC(E,0,2), ENC(C,1,2), 
+									ENC(D,0,2), ENC(D,1,2),
+									ENC(E,1,2), ENC(F,1,2),
+
+									ENC(G,0,2), ENC(E,1,2),
+									ENC(G,0,2), ENC(E,1,2),
+									ENC(F,0,2), ENC(D,1,2), 
+									ENC(F,0,2), ENC(D,1,2),
+									ENC(E,0,2), ENC(C,1,2),
+									ENC(E,0,2), ENC(C,1,2), 
+									ENC(D,0,2), ENC(G,1,2),
+									ENC(E,1,2), ENC(D,1,2),
+
+									ENC(C,0,2), ENC(C,1,2),
+									ENC(C,0,2), ENC(C,1,2),
+									ENC(G,0,2), ENC(E,1,2), 
+									ENC(G,0,2), ENC(E,1,2),
+									ENC(A,0,2), ENC(F,1,2),
+									ENC(A,0,2), ENC(F,1,2), 
+									ENC(G,0,2), ENC(E,1,2),
+									ENC(C,1,2), ENC(E,1,2),
+
+									ENC(F,0,2), ENC(D,1,2),
+									ENC(F,0,2), ENC(D,1,2),
+									ENC(E,0,2), ENC(C,1,2), 
+									ENC(E,0,2), ENC(C,1,2),
+									ENC(D,0,2), ENC(G,1,2),
+									ENC(D,0,2), ENC(F,1,2), 
+									ENC(C,0,2), ENC(E,1,2),
+									ENC(C,1,4)
+};
+
 
 #define SET_NOTE(a,i,o,l) \
 	a[i>>1] = ((o << 3) | (l - 1)) << ((i & 1) << 2)
@@ -198,13 +280,17 @@ uint8_t twinkle_lens[TWINKLE_LEN] = { 2, 2, 2, 2, 2, 2, 4,
 |-note--|o|-len-|
 */
 
+
+
+
 #define GOODNIGHT_LEN 11
+#if 0
 uint8_t goodnight[GOODNIGHT_LEN] = { Gb4,Db4,Ab4,F4,Gb4,B3,Eb4,
 									 F4,Eb4,Eb4,Db4};
 uint8_t goodnight_lens[GOODNIGHT_LEN] = { 4,2,4,2,4,2,6,
 											  4,4,4,4};	  
-
-#if 1
+#endif
+#if 0
 void play_goodnight(void) {
 	uint8_t i, j;
 	for ( i = 0; i < GOODNIGHT_LEN; i++ ) {
@@ -215,6 +301,7 @@ void play_goodnight(void) {
 	}
 }	
 #endif
+#if 0
 void play_moon(void) {
 	uint8_t i, j;
 	for ( i = 0; i < MOON_LEN; i++ ) {
@@ -227,7 +314,9 @@ void play_moon(void) {
 				_delay_ms(RIT);
 	}
 }	
+#endif
 uint8_t octave = 0;
+#if 0
 void play_twinkle(void) {
 	uint8_t i, j, o;
 	for ( i = 0; i < TWINKLE_LEN; i++ ) {
@@ -245,10 +334,43 @@ void play_twinkle(void) {
 
 	}
 }	
+#endif
+void play_twinkle(void) {
+	uint8_t i, j;
+	for ( i = 0; i < TWINKLE_LEN; i++ ) {
+		uint8_t x = twinkle_enc[i];
+		wav_len = notes[NOTE(x)];
+		refresh();
+		octave = OCTAVE(x);
+		OCR0A = (127 << octave);
 
+		for ( j = 0; j < LEN(x); j++) {
+			if (octave) {
+				_delay_ms(EIGHTH_NOTE);
+				_delay_ms(EIGHTH_NOTE>>2);
+				_delay_ms(EIGHTH_NOTE>>3);
+				//				_delay_ms(EIGHTH_NOTE>>4);
+			}
+			_delay_ms(EIGHTH_NOTE);
+		}
+
+		if ( i > TWINKLE_LEN - 7) {
+			for (j = 0; j < i - (TWINKLE_LEN - 7); j++) {
+				if (octave) {
+					_delay_ms(RIT);
+					_delay_ms(RIT>>2);
+					_delay_ms(RIT>>3);
+					//	_delay_ms(RIT>>4);
+				}
+				_delay_ms(RIT);
+			}
+		}
+	}
+}	
 
 					   
 #define DELAY 200
+#if 0
 void twinkle_a(void) {
 	uint8_t i;
 	for ( i = 0; i < MELODY_FRAG_LEN; i++ ) {
@@ -279,6 +401,7 @@ void twinkle_b(void) {
 		_delay_ms(DELAY);
 	}
 }
+#endif
 #if 0
 void twinkle(void) {
 	twinkle_a();
@@ -350,7 +473,8 @@ int main() {
 }
 
 
-#define DECAY 4
+//#define DECAY 4
+#define DECAY 3
 int decay = 0;
 
 #ifdef TWO__NOTES
