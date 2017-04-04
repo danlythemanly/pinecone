@@ -102,6 +102,7 @@ uint8_t p, last_p;
 uint8_t notes[10] = {100, 113, 127, 134, 150, 
 					 169, 179, 201, 225, 253 };
 
+#if 0
 /* sawtooth-like with full amplitude */
 static void refresh(void) {
 	int i;
@@ -110,6 +111,15 @@ static void refresh(void) {
 		wav[i] = i;// >> 1;
 	for (i = mid; i < wav_len; i++)
 		wav[i] = (i + 256 - wav_len);// >> 1;
+}
+#endif
+static void refresh(void) {
+	int i;
+	uint8_t mid = wav_len >> 1;
+	for (i=0; i < mid; i++)
+		wav[i] = i >> 1;
+	for (i = mid; i < wav_len; i++)
+		wav[i] = (i + 256 - wav_len) >> 1;
 }
 
 
@@ -137,6 +147,7 @@ uint8_t melody_a2[MELODY_FRAG_LEN] = { F4,F4,E4,E4,D4,D4,C4 };
 uint8_t melody_b[MELODY_FRAG_LEN] = { G4,G4,F4,F4,E4,E4,D4 };
 #endif
 
+//#define EIGHTH_NOTE 70
 #define EIGHTH_NOTE 70
 #define SIXTEENTH_NOTE (EIGHTH_NOTE >> 1)
 #define RIT 20
@@ -205,6 +216,7 @@ uint8_t twinkle_lens[TWINKLE_LEN] = { 2, 2, 2, 2, 2, 2, 4,
 #define OCTAVE(x) (!!((x) & 8))
 #define LEN(x) ((x) & 7)
 
+#if 1
 #define TWINKLE_LEN 94
 uint8_t twinkle_enc[TWINKLE_LEN] = {ENC(C,0,2), ENC(C,1,2),
 									ENC(C,0,2), ENC(C,1,2),
@@ -260,7 +272,58 @@ uint8_t twinkle_enc[TWINKLE_LEN] = {ENC(C,0,2), ENC(C,1,2),
 									ENC(C,0,2), ENC(E,1,2),
 									ENC(C,1,4)
 };
+#endif
+#if 0
+#define TWINKLE_LEN 42
+uint8_t twinkle_enc[TWINKLE_LEN] = {ENC(C,0,2),
+									ENC(C,0,2),
+									ENC(G,0,2),
+									ENC(G,0,2),
+									ENC(A,0,2),
+									ENC(A,0,2),
+									ENC(G,0,4),
 
+									ENC(F,0,2), 
+									ENC(F,0,2), 
+									ENC(E,0,2), 
+									ENC(E,0,2), 
+									ENC(D,0,2), 
+									ENC(D,0,2), 
+									ENC(C,0,4), 
+
+									ENC(G,0,2),
+									ENC(G,0,2),
+									ENC(F,0,2),
+									ENC(F,0,2),
+									ENC(E,0,2),
+									ENC(E,0,2),
+									ENC(D,0,4),
+
+									ENC(G,0,2),
+									ENC(G,0,2),
+									ENC(F,0,2),
+									ENC(F,0,2),
+									ENC(E,0,2),
+									ENC(E,0,2),
+									ENC(D,0,4),
+
+									ENC(C,0,2),
+									ENC(C,0,2),
+									ENC(G,0,2),
+									ENC(G,0,2),
+									ENC(A,0,2),
+									ENC(A,0,2),
+									ENC(G,0,4),
+
+									ENC(F,0,2), 
+									ENC(F,0,2), 
+									ENC(E,0,2), 
+									ENC(E,0,2), 
+									ENC(D,0,2), 
+									ENC(D,0,2), 
+									ENC(C,0,4), 
+};
+#endif
 
 #define SET_NOTE(a,i,o,l) \
 	a[i>>1] = ((o << 3) | (l - 1)) << ((i & 1) << 2)
@@ -467,14 +530,15 @@ int main() {
 	  //play_goodnight();
 	  //play_goodnight();
 	  play_twinkle();
+	  _delay_ms(EIGHTH_NOTE << 3);
   }
   
   return 0;
 }
 
 
-//#define DECAY 4
-#define DECAY 3
+#define DECAY 4
+//#define DECAY 3
 int decay = 0;
 
 #ifdef TWO__NOTES

@@ -54,6 +54,9 @@ install_audio: audio_sample.hex
 	stty -F /dev/ttyACM0 cs8 19200 ignbrk -brkint -icrnl -imaxbel -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke noflsh -ixon -crtscts
 	$(AVRDUDE) -C/home/djwillia/dev/arduino-1.6.4/hardware/tools/avr/etc/avrdude.conf -v -pattiny85 -cstk500v1 -P/dev/ttyACM0 -b19200 -U flash:w:audio_sample.hex:i
 
+install_p2: pinecone2.hex
+	stty -F /dev/ttyACM0 cs8 19200 ignbrk -brkint -icrnl -imaxbel -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke noflsh -ixon -crtscts
+	$(AVRDUDE) -C/home/djwillia/dev/arduino-1.6.4/hardware/tools/avr/etc/avrdude.conf -v -pattiny85 -cstk500v1 -P/dev/ttyACM0 -b19200 -U flash:w:pinecone2.hex:i
 
 clean:
 	rm -f *.elf *.hex *.o

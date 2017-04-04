@@ -84,7 +84,7 @@ int read_button(struct button *b) {
 }
 
 
-static int try_sleep(void) {
+int try_sleep(void) {
 	int ret = 0;
 
     ADCSRA &= ~_BV(ADEN);       // ADC off
@@ -213,7 +213,7 @@ int main(void) {
 
 // Called on pin interrupt
 ISR(PCINT0_vect) {
-	int i;
+	//int i;
 
 	// We don't want other interrupts from this pin yet
     PCMSK &= ~_BV(PCINT3);  
