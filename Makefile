@@ -58,6 +58,14 @@ install_p2: pinecone2.hex
 	stty -F /dev/ttyACM0 cs8 19200 ignbrk -brkint -icrnl -imaxbel -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke noflsh -ixon -crtscts
 	$(AVRDUDE) -C/home/djwillia/dev/arduino-1.6.4/hardware/tools/avr/etc/avrdude.conf -v -pattiny85 -cstk500v1 -P/dev/ttyACM0 -b19200 -U flash:w:pinecone2.hex:i
 
+USBTINY=$(shell lsusb -d 1781:0c9f | cut -f 2,4 -d ' ' | sed s/':'// | sed s/' '/':'/)
+
+fuses_p3:
+	$(AVRDUDE) -C/home/djwillia/dev/arduino-1.6.4/hardware/tools/avr/etc/avrdude.conf -v -v -v -v -pattiny85 -cusbtiny -Pusb:$(USBTINY) -e -Uefuse:w:0xff:m -Uhfuse:w:0xdf:m -Ulfuse:w:0xe2:m
+
+install_p3: pinecone2.hex
+	$(AVRDUDE) -C/home/djwillia/dev/arduino-1.6.4/hardware/tools/avr/etc/avrdude.conf -v -pattiny85 -cusbtiny -Pusb:$(USBTINY) -U flash:w:pinecone2.hex:i
+
 clean:
 	rm -f *.elf *.hex *.o
 

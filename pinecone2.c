@@ -8,10 +8,21 @@
 #define SIXTEENTH_NOTE (EIGHTH_NOTE >> 1)
 #define RIT 20
 
+#define ROUNDS 8
 
 #define LED PB4
 #define BUTTON PB2
 #define SPEAKER PB1
+
+#define speaker_on() do {							\
+	    DDRB |= 1 << SPEAKER;						\
+		PORTB |= (1 << SPEAKER);					\
+	} while (0)
+
+#define speaker_off() do {							\
+	    DDRB &= ~(1 << SPEAKER);					\
+		PORTB &= ~(1 << SPEAKER);					\
+	} while (0)
 
 #define led_on() do {							\
 		PORTB |= (1 << LED);					\
@@ -101,14 +112,16 @@ static uint8_t twinkle_enc[TWINKLE_LEN] = {ENC(C,0,2), ENC(C,1,2),
 										   ENC(C,1,4)
 };
 
+#define VOLUME_DIVISOR 1
+
 /* sawtooth-like with half amplitude */
 static void refresh(void) {
 	int i;
-	uint8_t mid = wav_len >> 1;
+	uint8_t mid = wav_len >> VOLUME_DIVISOR;
 	for (i=0; i < mid; i++)
-		wav[i] = i >> 1;
+		wav[i] = i >> VOLUME_DIVISOR;
 	for (i = mid; i < wav_len; i++)
-		wav[i] = (i + 256 - wav_len) >> 1;
+		wav[i] = (i + 256 - wav_len) >> VOLUME_DIVISOR;
 }
 
 static void play_twinkle(void) {
@@ -148,13 +161,22 @@ void WDT_off(void) {
 	WDTCR = 0x00;
 }
 void WDT_on(void) {
-	WDTCR &= ~(_BV(WDP0) | _BV(WDP3) | _BV(WDP3));
-	WDTCR |= _BV(WDP1);
+	WDTCR &= ~(_BV(WDP1) | _BV(WDP3));
+	WDTCR |= _BV(WDP2) | _BV(WDP0);
 	WDTCR |= _BV(WDCE) | _BV(WDE);
 	WDTCR &= ~_BV(WDIE);
 }
 
+void reset(void) {
+	led_off();
+	speaker_off();
+	WDT_on();
+	for(;;);
+}
+
 int main() {
+	int i;
+
 	WDT_off();
 
 	DDRB &= ~(1 << BUTTON);
@@ -186,6 +208,7 @@ int main() {
 	last_p = wav_len = 255;
 
 	led_off();
+	speaker_off();
 	MCUCR &= ~(_BV(ISC01) | _BV(ISC00));
 
 	ACSR |= _BV(ACD);           //disable the analog comparator
@@ -205,16 +228,18 @@ int main() {
 	sleep_cpu();
 	cli();
 	sleep_disable();
-	_delay_ms(200);
+	led_on();
+	speaker_on();
+	_delay_ms(400);
 	sei();
 	do_reset = 1;
 
-	led_on();
-	for(;;){
+	for(i = 0; i < ROUNDS; i++){
 		play_twinkle();
 		_delay_ms(EIGHTH_NOTE << 3);
 	}
-  
+
+	reset();
 	return 0;
 }
 
@@ -232,9 +257,6 @@ ISR(TIMER0_COMPA_vect) {
 
 /* button interrupt */
 ISR(INT0_vect) {
-	if (do_reset) {
-		led_off();
-		WDT_on();
-		for(;;);
-	}
+	if (do_reset)
+		reset();
 }
